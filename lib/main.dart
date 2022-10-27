@@ -20,8 +20,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-final currentDate = Provider<DateTime>((ref) => DateTime.now());
-
 class HomePage extends ConsumerWidget {
   const HomePage({
     Key? key,
@@ -29,17 +27,49 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final date = ref.watch(currentDate);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Riverpod'),
       ),
       body: Center(
-        child: Text(
-          date.day.toString(),
-          style: Theme.of(context).textTheme.headline4,
+        child: Consumer(
+          builder: (context, ref, child) {
+            final count = ref.watch(counterProvider);
+            final text = count == null ? 'Press the button' : count.toString();
+            return Text(
+              text,
+              style: const TextStyle(fontSize: 28),
+            );
+          },
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: ref.read(counterProvider.notifier).increment,
+        child: const Icon(Icons.add),
+      ),
     );
+  }
+}
+
+
+
+final counterProvider = StateNotifierProvider<Counter, int?>(
+  (ref) => Counter(),
+);
+
+class Counter extends StateNotifier<int?> {
+  Counter() : super(null);
+
+  void increment() => state = (state == null) ? 1 : (state + 1);
+}
+
+extension OptionalInfixAddition<T extends num> on T? {
+  T? operator +(T? other) {
+    final shadow = this;
+    if (shadow != null) {
+      return shadow + (other ?? 0) as T;
+    } else {
+      return null;
+    }
   }
 }
