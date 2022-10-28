@@ -27,49 +27,79 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentWeather = ref.watch(weatherProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Riverpod'),
       ),
-      body: Center(
-        child: Consumer(
-          builder: (context, ref, child) {
-            final count = ref.watch(counterProvider);
-            final text = count == null ? 'Press the button' : count.toString();
-            return Text(
-              text,
-              style: const TextStyle(fontSize: 28),
-            );
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: ref.read(counterProvider.notifier).increment,
-        child: const Icon(Icons.add),
+      body: Column(
+        children: [
+          currentWeather.when(
+            data: (data) => Text(
+              data,
+              style: const TextStyle(fontSize: 40),
+            ),
+            error: (_, __) => const Text('Error 🥲'),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(8),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemBuilder: (context, index) {
+                final city = City.values[index];
+                final isSelected = city == ref.watch(currentCityProvider);
+                return ListTile(
+                  title: Text(
+                    city.toString(),
+                  ),
+                  trailing: isSelected ? const Icon(Icons.check) : null,
+                  onTap: () =>
+                      ref.read(currentCityProvider.notifier).state = city,
+                );
+              },
+              itemCount: City.values.length,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
+const unknownWeatherEmoji = '🤷‍';
 
+//UI writes to and reads this
+final currentCityProvider = StateProvider<City?>((ref) => null);
 
-final counterProvider = StateNotifierProvider<Counter, int?>(
-  (ref) => Counter(),
-);
+//UI reads this
+final weatherProvider = FutureProvider<WeatherEmoji>((ref) {
+  final city = ref.watch(currentCityProvider);
+  if (city != null) {
+    return getWeather(city);
+  }
+  return unknownWeatherEmoji;
+});
 
-class Counter extends StateNotifier<int?> {
-  Counter() : super(null);
-
-  void increment() => state = (state == null) ? 1 : (state + 1);
+enum City {
+  stockholm,
+  paris,
+  tokyo,
+  saigon,
 }
 
-extension OptionalInfixAddition<T extends num> on T? {
-  T? operator +(T? other) {
-    final shadow = this;
-    if (shadow != null) {
-      return shadow + (other ?? 0) as T;
-    } else {
-      return null;
-    }
-  }
+typedef WeatherEmoji = String;
+
+Future<WeatherEmoji> getWeather(City city) {
+  return Future.delayed(
+    const Duration(seconds: 1),
+    () => {
+      City.stockholm: '❄️',
+      City.paris: '🌧',
+      City.tokyo: '💨',
+      City.saigon: '☀️',
+    }[city]!,
+  );
 }
